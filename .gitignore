@@ -1,0 +1,33 @@
+# Sekrety (klucz API DeepSeek); szablon .env.example jest w repozytorium
+.env
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+dist/
+build/
+
+# Środowisko wirtualne
+.venv/
+venv/
+
+# Pobrane filmy i niedokończone pobrania
+*.mp4
+*.mp4.part
+
+# Tymczasowy obrazek captchy zapisywany w trybie ręcznym
+vider-captcha.*
+
+# IDE i system
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+desktop.ini

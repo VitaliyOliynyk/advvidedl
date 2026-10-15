@@ -1,0 +1,7 @@
+.venv
+.env
+.git
+.pytest_cache
+**/__pycache__
+*.mp4
+*.mp4.part
