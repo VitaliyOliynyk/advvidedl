@@ -11,6 +11,24 @@ from advvidedl.codec import decode_file_code
 logger = logging.getLogger(__name__)
 
 _CODE_RE = re.compile(r"/vid/\+f([a-z0-9]+)")
+_DIR_URL_RE = re.compile(r"^https?://(www\.)?vider\.(info|pl)/dir/\+d[a-z0-9]+")
+_VIDEO_URL_RE = re.compile(r"^https?://(www\.)?vider\.(info|pl)/vid/\+f[a-z0-9]+")
+
+
+def url_kind(url: str) -> str | None:
+    """``"dir"`` dla adresu katalogu, ``"video"`` dla adresu filmu, inaczej None."""
+    url = url.strip()
+    if _DIR_URL_RE.match(url):
+        return "dir"
+    if _VIDEO_URL_RE.match(url):
+        return "video"
+    return None
+
+
+def parse_video_code(url: str) -> str | None:
+    """Kod filmu z adresu ``…/vid/+f<kod>`` albo None, gdy to nie jest adres filmu."""
+    match = _CODE_RE.search(url)
+    return match.group(1) if match else None
 
 
 @dataclass(frozen=True)
@@ -53,3 +71,17 @@ def parse_directory(html: str) -> list[Video]:
             continue
         videos[code] = Video(code, file_id, title or code)
     return list(videos.values())
+
+
+def parse_video_page(html: str, code: str) -> Video:
+    """Film ze strony ``/vid/+f<kod>``; tytuł z ``og:title``, a gdy go brak, z nagłówka."""
+    soup = BeautifulSoup(html, "html.parser")
+    title = ""
+    meta = soup.select_one('meta[property="og:title"][content]')
+    if meta is not None:
+        title = meta["content"].strip()
+    if not title:
+        heading = soup.select_one('h1[itemprop="name"]')
+        if heading is not None:
+            title = heading.get_text(" ", strip=True)
+    return Video(code, decode_file_code(code), title or code)

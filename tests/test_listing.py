@@ -1,5 +1,37 @@
-from advvidedl.listing import Video, parse_directory
+import pytest
+
+from advvidedl.listing import Video, parse_directory, parse_video_code, parse_video_page, url_kind
 from conftest import FIXTURES
+
+
+@pytest.mark.parametrize(
+    ("url", "kind", "code"),
+    [
+        ("https://vider.info/dir/+dse1v51", "dir", None),
+        ("https://vider.info/vid/+fxn8m5x", "video", "xn8m5x"),
+        ("https://www.vider.pl/vid/+fxn8m5x/", "video", "xn8m5x"),
+        ("http://vider.info/vid/+fxn8m5x?autoplay=1", "video", "xn8m5x"),
+        ("https://vider.info/", None, None),
+        ("https://example.com/vid/+fxn8m5x", None, "xn8m5x"),
+        ("League 05", None, None),
+    ],
+)
+def test_url_kind_and_video_code(url, kind, code):
+    assert url_kind(url) == kind
+    assert parse_video_code(url) == code
+
+
+def test_parses_live_video_page():
+    html = (FIXTURES / "video_live.html").read_text(encoding="utf-8")
+
+    assert parse_video_page(html, "xn8m5x") == Video(
+        "xn8m5x", 215072, "Pokemon Indigo League 01- Pokemon wybieram cię !"
+    )
+
+
+def test_video_page_title_fallbacks():
+    assert parse_video_page('<h1 itemprop="name"> Tytuł z nagłówka </h1>', "xn8m5x").title == "Tytuł z nagłówka"
+    assert parse_video_page("<html></html>", "xn8m5x").title == "xn8m5x"
 
 
 def test_parses_saved_directory(directory_html):
