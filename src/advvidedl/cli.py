@@ -27,27 +27,27 @@ Tryb zależy od podanego adresu:
                                           od --start do --end
   film     https://vider.info/vid/+f...  jeden film
 
-Uruchomiony bez adresu program pyta o brakujące parametry (tryb interaktywny)."""
+Uruchomiony bez parametrów program pyta o potrzebne dane (tryb interaktywny)."""
 
 EPILOG = """\
 Przykłady:
-  cały katalog do bieżącego katalogu:
+  wszystkie filmy z katalogu, zapisywane w bieżącym katalogu:
     advvidedl https://vider.info/dir/+dse1v51
-  cały katalog do wskazanego katalogu (zostanie utworzony):
+  wszystkie filmy z katalogu, zapisywane we wskazanym katalogu (zostanie utworzony):
     advvidedl https://vider.info/dir/+dse1v51 -o "D:\\Filmy\\Pokemon"
   od filmu o podanej nazwie (wystarczy fragment) do końca katalogu:
     advvidedl https://vider.info/dir/+dse1v51 --start "League 05"
   od filmu o podanym adresie do końca katalogu:
     advvidedl https://vider.info/dir/+dse1v51 --start https://vider.info/vid/+fxn8xmn
-  od filmu do filmu (włącznie):
+  od jednego wskazanego filmu do drugiego (włącznie):
     advvidedl https://vider.info/dir/+dse1v51 -s "League 05" -e "League 07"
   od początku katalogu do wskazanego filmu:
     advvidedl https://vider.info/dir/+dse1v51 --end "League 10"
-  tylko lista, bez pobierania:
+  podgląd listy, bez pobierania:
     advvidedl https://vider.info/dir/+dse1v51 -s "League 05" -e "League 07" --dry-run
-  jeden film:
+  pojedynczy film:
     advvidedl https://vider.info/vid/+fxn8m5x -o filmy
-  tryb interaktywny (pytania o adres, katalog docelowy i zakres):
+  tryb interaktywny (bez parametrów; pytania o adres, katalog docelowy i zakres):
     advvidedl"""
 
 
@@ -83,7 +83,7 @@ def _build_parser() -> argparse.ArgumentParser:
         metavar="FILM",
         help="ostatni film do pobrania (włącznie): URL albo nazwa; domyślnie ostatni w katalogu",
     )
-    what.add_argument("--dry-run", action="store_true", help="tylko wypisz listę filmów, nic nie pobieraj")
+    what.add_argument("--dry-run", action="store_true", help="tylko wyświetl listę filmów, niczego nie pobieraj")
 
     where = parser.add_argument_group("Gdzie zapisać")
     where.add_argument(
@@ -100,23 +100,23 @@ def _build_parser() -> argparse.ArgumentParser:
         type=int,
         default=4,
         metavar="N",
-        help="ile razy captchę rozwiązuje DeepSeek, zanim program poprosi o wpisanie kodu (domyślnie 4)",
+        help="liczba prób rozwiązania captchy przez DeepSeek, po których program poprosi o ręczne wpisanie kodu (domyślnie 4)",
     )
     captcha.add_argument(
         "--max-captcha",
         type=int,
         default=12,
         metavar="N",
-        help="maksymalna liczba podejść do captchy na jedną stronę (domyślnie 12)",
+        help="maksymalna liczba prób rozwiązania captchy dla jednej strony (domyślnie 12)",
     )
     captcha.add_argument(
         "--model",
         default=os.environ.get("DEEPSEEK_MODEL", "deepseek-flash"),
-        help="model DeepSeek z obsługą obrazów (domyślnie deepseek-flash albo $DEEPSEEK_MODEL)",
+        help="model DeepSeek obsługujący obrazy (domyślnie deepseek-flash albo wartość zmiennej DEEPSEEK_MODEL)",
     )
 
     other = parser.add_argument_group("Inne")
-    other.add_argument("-h", "--help", action="help", help="pokaż tę pomoc i zakończ")
+    other.add_argument("-h", "--help", action="help", help="wyświetl tę pomoc i zakończ")
     return parser
 
 
@@ -174,7 +174,7 @@ def _run(args: argparse.Namespace, interactive_mode: bool) -> int:
     else:
         videos = parse_directory(html)
         if not videos:
-            logger.error("Nie znaleziono żadnych filmów na %s", args.url)
+            logger.error("Nie znaleziono żadnych filmów pod adresem %s", args.url)
             return 1
         logger.info("Znaleziono filmów w katalogu: %d", len(videos))
         try:
@@ -189,13 +189,13 @@ def _run(args: argparse.Namespace, interactive_mode: bool) -> int:
         # nazwy liczone dla całego katalogu, żeby nie zależały od wybranego zakresu
         named = assign_filenames(videos)[first : last + 1]
         if len(named) < len(videos):
-            logger.info("Wybrano %d: od „%s” do „%s”", len(named), videos[first].title, videos[last].title)
+            logger.info("Wybrane filmy: %d, od „%s” do „%s”", len(named), videos[first].title, videos[last].title)
 
     if args.dry_run:
         for video, name in named:
             print(f"{video.file_id}\t{name}\t{stream_url(video.file_id)}")
         return 0
-    if interactive_mode and not interactive.confirm(f"Pobrać filmów: {len(named)} do {args.output.resolve()}?"):
+    if interactive_mode and not interactive.confirm(f"Pobrać wybrane filmy ({len(named)}) do {args.output.resolve()}?"):
         return 0
     return _download_all(session, named, args.output)
 
@@ -226,7 +226,7 @@ def _download_all(session: requests.Session, named: list[tuple[Video, str]], out
             logger.error("  BŁĄD: %s", exc)
             failed.append(name)
 
-    logger.info("Gotowe: %d OK, %d błędów. Katalog: %s", len(named) - len(failed), len(failed), output.resolve())
+    logger.info("Gotowe. Pobrane: %d, błędy: %d. Katalog: %s", len(named) - len(failed), len(failed), output.resolve())
     for name in failed:
         logger.info("  nie pobrano: %s", name)
     return 1 if failed else 0
